@@ -9,6 +9,7 @@
 -   `Scrollable`: Convert to TypeScript ([#42016](https://github.com/WordPress/gutenberg/pull/42016)).
 -   `Spacer`: Complete TypeScript migration ([#42013](https://github.com/WordPress/gutenberg/pull/42013)).
 -   `TreeSelect`: Refactor away from `_.repeat()` ([#42070](https://github.com/WordPress/gutenberg/pull/42070/)).
+-   `RangeControl`: Convert to TypeScript ([#40535](https://github.com/WordPress/gutenberg/pull/40535)).
 
 ## 19.14.0 (2022-06-29)
 
