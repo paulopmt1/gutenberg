@@ -63,6 +63,9 @@ class WP_Style_Engine {
 					'default' => 'background-color',
 				),
 				'path'          => array( 'color', 'background' ),
+				'css_vars'      => array(
+					'--wp--preset--color--$slug' => 'color',
+				),
 				'classnames'    => array(
 					'has-background'             => true,
 					'has-$slug-background-color' => 'color',
@@ -161,6 +164,14 @@ class WP_Style_Engine {
 				'css_vars'      => array(
 					'spacing' => '--wp--preset--spacing--$slug',
 				),
+			),
+			'blockGap'  => array(
+				'value_func' => 'static::get_css_custom_property_declaration',
+				'property_keys' => array(
+					'default'    => 'gap',
+					'css_var'    => '--wp--style--block-gap',
+				),
+				'path'          => array( 'spacing', 'blockGap' ),
 			),
 		),
 		'typography' => array(
@@ -430,6 +441,7 @@ class WP_Style_Engine {
 		if ( ! empty( $css_declarations ) ) {
 			// Generate inline style declarations.
 			foreach ( $css_declarations as $css_property => $css_value ) {
+				// @TODO Commented out so that it can test CSS property definitions, e.g., --wp--preset--something: 1px;
 				$filtered_css_declaration = esc_html( safecss_filter_attr( "{$css_property}: {$css_value}" ) );
 				if ( ! empty( $filtered_css_declaration ) ) {
 					if ( $should_prettify ) {
@@ -517,6 +529,16 @@ class WP_Style_Engine {
 			}
 		}
 		return $css_declarations;
+	}
+
+	// For block gap. TESTING!!!
+	// This only works for static::ROOT_BLOCK_SELECTOR right now.
+	protected static function get_css_custom_property_declaration( $style_value, $style_definition ) {
+		$rules = array();
+		if ( isset( $style_definition['property_keys']['css_var'] ) ) {
+			$rules[ $style_definition['property_keys']['css_var'] ] = $style_value;
+		}
+		return $rules;
 	}
 }
 
