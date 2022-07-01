@@ -165,11 +165,12 @@ class WP_Style_Engine {
 					'spacing' => '--wp--preset--spacing--$slug',
 				),
 			),
-			'blockGap'  => array(
-				'value_func' => 'static::get_css_custom_property_declaration',
+			'blockGap' => array(
 				'property_keys' => array(
-					'default'    => 'gap',
-					'css_var'    => '--wp--style--block-gap',
+					// @TODO 'grid-gap' has been deprecated in favor of 'gap'.
+					// See: https://developer.mozilla.org/en-US/docs/Web/CSS/gap.
+					// Update the white list in safecss_filter_attr (kses.php).
+					'default' => 'grid-gap',
 				),
 				'path'          => array( 'spacing', 'blockGap' ),
 			),
@@ -305,6 +306,25 @@ class WP_Style_Engine {
 	}
 
 	/**
+	 * Merges single style definitions with incoming custom style definitions.
+	 *
+	 * @param array $style_definition The internal style definition metadata.
+	 * @param array $custom_definition The custom style definition metadata to be merged.
+	 *
+	 * @return array The merged definition metadata.
+	 */
+	public static function merge_custom_style_definitions_metadata( $style_definition, $custom_definition = array() ) {
+		$valid_keys = array( 'property_keys', 'classnames' );
+		foreach ( $valid_keys as $key ) {
+			if ( isset( $custom_definition[ $key ] ) && is_array( $custom_definition[ $key ] ) ) {
+				$style_definition[ $key ] = array_merge( $style_definition[ $key ], $custom_definition[ $key ] );
+			}
+		}
+
+		return $style_definition;
+	}
+
+	/**
 	 * Returns classnames, and generates classname(s) from a CSS preset property pattern, e.g., 'var:preset|color|heavenly-blue'.
 	 *
 	 * @param array         $style_value      A single raw style value or css preset property from the generate() $block_styles array.
@@ -345,20 +365,21 @@ class WP_Style_Engine {
 	 *
 	 * @param array         $style_value      A single raw style value from the generate() $block_styles array.
 	 * @param array<string> $style_definition A single style definition from BLOCK_STYLE_DEFINITIONS_METADATA.
-	 * @param boolean       $should_return_css_vars Whether to try to build and return CSS var values.
+	 * @param array<string> $options Options passed to generate().
 	 *
 	 * @return array        An array of CSS definitions, e.g., array( "$property" => "$value" ).
 	 */
-	protected static function get_css_declarations( $style_value, $style_definition, $should_return_css_vars ) {
+	protected static function get_css_declarations( $style_value, $style_definition, $options ) {
 		if (
 			isset( $style_definition['value_func'] ) &&
 			is_callable( $style_definition['value_func'] )
 		) {
-			return call_user_func( $style_definition['value_func'], $style_value, $style_definition, $should_return_css_vars );
+			return call_user_func( $style_definition['value_func'], $style_value, $style_definition, $options );
 		}
 
-		$css_declarations    = array();
-		$style_property_keys = $style_definition['property_keys'];
+		$css_declarations       = array();
+		$style_property_keys    = $style_definition['property_keys'];
+		$should_return_css_vars = isset( $options['css_vars'] ) && true === $options['css_vars'];
 
 		// Build CSS var values from var:? values, e.g, `var(--wp--css--rule-slug )`
 		// Check if the value is a CSS preset and there's a corresponding css_var pattern in the style definition.
@@ -377,6 +398,9 @@ class WP_Style_Engine {
 		// for styles such as margins and padding.
 		if ( is_array( $style_value ) ) {
 			foreach ( $style_value as $key => $value ) {
+				if ( ! isset( $style_property_keys['individual'] ) ) {
+					return $css_declarations;
+				}
 				if ( is_string( $value ) && strpos( $value, 'var:' ) !== false && $should_return_css_vars && ! empty( $style_definition['css_vars'] ) ) {
 					$value = static::get_css_var_value( $value, $style_definition['css_vars'] );
 				}
@@ -385,7 +409,7 @@ class WP_Style_Engine {
 					$css_declarations[ $individual_property ] = $value;
 				}
 			}
-		} else {
+		} elseif ( isset( $style_property_keys['default'] ) ) {
 			$css_declarations[ $style_property_keys['default'] ] = $style_value;
 		}
 
@@ -414,14 +438,18 @@ class WP_Style_Engine {
 
 		$css_declarations       = array();
 		$classnames             = array();
-		$should_return_css_vars = isset( $options['css_vars'] ) && true === $options['css_vars'];
+		$custom_metadata        = isset( $options['custom_metadata'] ) && is_array( $options['custom_metadata'] ) ? $options['custom_metadata'] : null;
 
 		// Collect CSS and classnames.
 		foreach ( self::BLOCK_STYLE_DEFINITIONS_METADATA as $definition_group_key => $definition_group_style ) {
 			if ( empty( $block_styles[ $definition_group_key ] ) ) {
 				continue;
 			}
-			foreach ( $definition_group_style as $style_definition ) {
+			foreach ( $definition_group_style as $style_key => $style_definition ) {
+				// Merge incoming custom metadata.
+				if ( isset( $custom_metadata[ "$definition_group_key.$style_key" ] ) ) {
+					$style_definition = static::merge_custom_style_definitions_metadata( $style_definition, $custom_metadata[ "$definition_group_key.$style_key" ] );
+				}
 				$style_value = _wp_array_get( $block_styles, $style_definition['path'], null );
 
 				if ( ! static::is_valid_style_value( $style_value ) ) {
@@ -429,7 +457,7 @@ class WP_Style_Engine {
 				}
 
 				$classnames       = array_merge( $classnames, static::get_classnames( $style_value, $style_definition ) );
-				$css_declarations = array_merge( $css_declarations, static::get_css_declarations( $style_value, $style_definition, $should_return_css_vars ) );
+				$css_declarations = array_merge( $css_declarations, static::get_css_declarations( $style_value, $style_definition, $options ) );
 			}
 		}
 
@@ -441,8 +469,9 @@ class WP_Style_Engine {
 		if ( ! empty( $css_declarations ) ) {
 			// Generate inline style declarations.
 			foreach ( $css_declarations as $css_property => $css_value ) {
-				// @TODO Commented out so that it can test CSS property definitions, e.g., --wp--preset--something: 1px;
-				$filtered_css_declaration = esc_html( safecss_filter_attr( "{$css_property}: {$css_value}" ) );
+				// @TODO The safecss_filter_attr_allow_css filter in safecss_filter_attr (kses.php) does not let through CSS custom variables.
+				// So we have to be strict about them here.
+				$filtered_css_declaration = isset( static::VALID_CUSTOM_PROPERTIES[ $css_property ] ) ? esc_html( "{$css_property}: {$css_value}" ) : esc_html( safecss_filter_attr( "{$css_property}: {$css_value}" ) );
 				if ( ! empty( $filtered_css_declaration ) ) {
 					if ( $should_prettify ) {
 						$filtered_css_declarations[] = "\t$filtered_css_declaration;\n";
@@ -529,16 +558,6 @@ class WP_Style_Engine {
 			}
 		}
 		return $css_declarations;
-	}
-
-	// For block gap. TESTING!!!
-	// This only works for static::ROOT_BLOCK_SELECTOR right now.
-	protected static function get_css_custom_property_declaration( $style_value, $style_definition ) {
-		$rules = array();
-		if ( isset( $style_definition['property_keys']['css_var'] ) ) {
-			$rules[ $style_definition['property_keys']['css_var'] ] = $style_value;
-		}
-		return $rules;
 	}
 }
 
