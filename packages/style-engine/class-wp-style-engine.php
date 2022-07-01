@@ -31,6 +31,14 @@ class WP_Style_Engine {
 	private static $instance = null;
 
 	/**
+	 * A white list of CSS custom properties.
+	 * Used to bypass safecss_filter_attr().
+	 */
+	const VALID_CUSTOM_PROPERTIES = array(
+		'--wp--style--block-gap' => array( 'spacing', 'blockGap' ),
+	);
+
+	/**
 	 * Style definitions that contain the instructions to
 	 * parse/output valid Gutenberg styles from a block's attributes.
 	 * For every style definition, the follow properties are valid:
@@ -365,7 +373,7 @@ class WP_Style_Engine {
 	 *
 	 * @param array         $style_value      A single raw style value from the generate() $block_styles array.
 	 * @param array<string> $style_definition A single style definition from BLOCK_STYLE_DEFINITIONS_METADATA.
-	 * @param array<string> $options Options passed to generate().
+	 * @param array<string> $options          Options passed to generate().
 	 *
 	 * @return array        An array of CSS definitions, e.g., array( "$property" => "$value" ).
 	 */
@@ -386,7 +394,7 @@ class WP_Style_Engine {
 		if ( is_string( $style_value ) && strpos( $style_value, 'var:' ) !== false ) {
 			if ( $should_return_css_vars && ! empty( $style_definition['css_vars'] ) ) {
 				$css_var = static::get_css_var_value( $style_value, $style_definition['css_vars'] );
-				if ( $css_var ) {
+				if ( $css_var && isset( $style_property_keys['default'] ) ) {
 					$css_declarations[ $style_property_keys['default'] ] = $css_var;
 				}
 			}
@@ -462,8 +470,8 @@ class WP_Style_Engine {
 		}
 
 		// Build CSS rules output.
-		$css_selector              = isset( $options['selector'] ) ? $options['selector'] : null;
 		$filtered_css_declarations = array();
+		$css_selector              = isset( $options['selector'] ) ? $options['selector'] : null;
 		$should_prettify           = isset( $options['prettify'] ) ? $options['prettify'] : null;
 
 		if ( ! empty( $css_declarations ) ) {
@@ -522,16 +530,18 @@ class WP_Style_Engine {
 	 *
 	 * @param array   $style_value                    A single raw Gutenberg style attributes value for a CSS property.
 	 * @param array   $individual_property_definition A single style definition from BLOCK_STYLE_DEFINITIONS_METADATA.
-	 * @param boolean $should_return_css_vars Whether to try to build and return CSS var values.
+	 * @param array<string> $options                  Options passed to generate().
 	 *
 	 * @return array An array of CSS definitions, e.g., array( "$property" => "$value" ).
 	 */
-	protected static function get_individual_property_css_declarations( $style_value, $individual_property_definition, $should_return_css_vars ) {
+	protected static function get_individual_property_css_declarations( $style_value, $individual_property_definition, $options ) {
 		$css_declarations = array();
 
 		if ( ! is_array( $style_value ) || empty( $style_value ) || empty( $individual_property_definition['path'] ) ) {
 			return $css_declarations;
 		}
+
+		$should_return_css_vars = isset( $options['css_vars'] ) && true === $options['css_vars'];
 
 		// The first item in $individual_property_definition['path'] array tells us the style property, e.g., "border".
 		// We use this to get a corresponding CSS style definition such as "color" or "width" from the same group.
