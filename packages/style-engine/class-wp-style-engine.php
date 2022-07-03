@@ -72,7 +72,7 @@ class WP_Style_Engine {
 				),
 				'path'          => array( 'color', 'background' ),
 				'css_vars'      => array(
-					'--wp--preset--color--$slug' => 'color',
+					'color' => '--wp--preset--color--$slug',
 				),
 				'classnames'    => array(
 					'has-background'             => true,
@@ -153,7 +153,7 @@ class WP_Style_Engine {
 			),
 		),
 		'spacing'    => array(
-			'padding' => array(
+			'padding'  => array(
 				'property_keys' => array(
 					'default'    => 'padding',
 					'individual' => 'padding-%s',
@@ -163,7 +163,7 @@ class WP_Style_Engine {
 					'spacing' => '--wp--preset--spacing--$slug',
 				),
 			),
-			'margin'  => array(
+			'margin'   => array(
 				'property_keys' => array(
 					'default'    => 'margin',
 					'individual' => 'margin-%s',
@@ -257,6 +257,25 @@ class WP_Style_Engine {
 	}
 
 	/**
+	 * Merges single style definitions with incoming custom style definitions.
+	 *
+	 * @param array $style_definition The internal style definition metadata.
+	 * @param array $custom_definition The custom style definition metadata to be merged.
+	 *
+	 * @return array The merged definition metadata.
+	 */
+	public static function merge_custom_style_definitions_metadata( $style_definition, $custom_definition = array() ) {
+		$valid_keys = array( 'property_keys', 'classnames' );
+		foreach ( $valid_keys as $key ) {
+			if ( isset( $custom_definition[ $key ] ) && is_array( $custom_definition[ $key ] ) ) {
+				$style_definition[ $key ] = array_merge( $style_definition[ $key ], $custom_definition[ $key ] );
+			}
+		}
+
+		return $style_definition;
+	}
+
+	/**
 	 * Extracts the slug in kebab case from a preset string, e.g., "heavenly-blue" from 'var:preset|color|heavenlyBlue'.
 	 *
 	 * @param string? $style_value  A single css preset value.
@@ -311,25 +330,6 @@ class WP_Style_Engine {
 		}
 
 		return true;
-	}
-
-	/**
-	 * Merges single style definitions with incoming custom style definitions.
-	 *
-	 * @param array $style_definition The internal style definition metadata.
-	 * @param array $custom_definition The custom style definition metadata to be merged.
-	 *
-	 * @return array The merged definition metadata.
-	 */
-	public static function merge_custom_style_definitions_metadata( $style_definition, $custom_definition = array() ) {
-		$valid_keys = array( 'property_keys', 'classnames' );
-		foreach ( $valid_keys as $key ) {
-			if ( isset( $custom_definition[ $key ] ) && is_array( $custom_definition[ $key ] ) ) {
-				$style_definition[ $key ] = array_merge( $style_definition[ $key ], $custom_definition[ $key ] );
-			}
-		}
-
-		return $style_definition;
 	}
 
 	/**
@@ -417,7 +417,7 @@ class WP_Style_Engine {
 					$css_declarations[ $individual_property ] = $value;
 				}
 			}
-		} elseif ( isset( $style_property_keys['default'] ) ) {
+		} else {
 			$css_declarations[ $style_property_keys['default'] ] = $style_value;
 		}
 
@@ -444,9 +444,9 @@ class WP_Style_Engine {
 			return null;
 		}
 
-		$css_declarations       = array();
-		$classnames             = array();
-		$custom_metadata        = isset( $options['custom_metadata'] ) && is_array( $options['custom_metadata'] ) ? $options['custom_metadata'] : null;
+		$css_declarations = array();
+		$classnames       = array();
+		$custom_metadata  = isset( $options['custom_metadata'] ) && is_array( $options['custom_metadata'] ) ? $options['custom_metadata'] : null;
 
 		// Collect CSS and classnames.
 		foreach ( self::BLOCK_STYLE_DEFINITIONS_METADATA as $definition_group_key => $definition_group_style ) {
@@ -528,8 +528,8 @@ class WP_Style_Engine {
 	 * "border-{top|right|bottom|left}-{color|width|style}: {value};" or,
 	 * "border-image-{outset|source|width|repeat|slice}: {value};"
 	 *
-	 * @param array   $style_value                    A single raw Gutenberg style attributes value for a CSS property.
-	 * @param array   $individual_property_definition A single style definition from BLOCK_STYLE_DEFINITIONS_METADATA.
+	 * @param array         $style_value                    A single raw Gutenberg style attributes value for a CSS property.
+	 * @param array         $individual_property_definition A single style definition from BLOCK_STYLE_DEFINITIONS_METADATA.
 	 * @param array<string> $options                  Options passed to generate().
 	 *
 	 * @return array An array of CSS definitions, e.g., array( "$property" => "$value" ).
