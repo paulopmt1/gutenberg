@@ -51,6 +51,14 @@ class Render_Block_Heading_Test extends WP_UnitTestCase {
 			array(
 				'<h2 style="display: block" class="is-align-right"><h2>Hello World</h2></h2>',
 				'<h2 style="display: block" class="is-align-right wp-block-heading"><h2>Hello World</h2></h2>'
+			),
+			array(
+				'<h2 style="display: block" class="is-align-right" data-class="corner case!"><h2>Hello World</h2></h2>',
+				'<h2 style="display: block" class="is-align-right wp-block-heading" data-class="corner case!"><h2>Hello World</h2></h2>'
+			),
+			array(
+				'<h2 data-class="corner case!" style="display: block" class="is-align-right"><h2>Hello World</h2></h2>',
+				'<h2 data-class="corner case!" style="display: block" class="is-align-right wp-block-heading"><h2>Hello World</h2></h2>'
 			)
 		);
 	}

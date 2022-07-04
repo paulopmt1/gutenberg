@@ -17,23 +17,23 @@
 function block_core_heading_render( $attributes, $content ) {
 	$matches = array();
 	$pattern = '/
-		^(\s*)                               # Any leading whitespace.
-		<(?<tag_name>
-			h[1-6]                           # The opening tag...
-			(?=\s|>)                         # ...followed by a whitespace or >
-		                                     # ?= means a "lookahead"
-		)
-		(?<before_class>                     # Any attributes prior to "class"
-			(?:                              # ?: is a "non-capturing group"
-				(?!class=")[^>]				 # Match all characters until ">" except when
-											 # the next character sequence is class="
-											 # ?! is a "negative lookahead"
-			)*
-		)
-		(?:\s*class="(?<class_name>[^"]+)")? # The class attribute, if any
-		(?<after_class>[^>]*?)               # The rest of the tag
-		>						             # The closing tag
-	/xm';
+        ^(\s*)                               # Any leading whitespace.
+        <(?<tag_name>
+            h[1-6]                           # The opening tag...
+            (?=\s|>)                         # ...followed by a whitespace or >
+                                             # ?= means a "lookahead"
+        )
+        (?<before_class>                     # Any attributes prior to "class"
+            (?:                              # ?: is a "non-capturing group"
+                (?!\sclass=")[^>]            # Match all characters until ">" except when
+                                             # the next character sequence is \sclass="
+                                             # ?! is a "negative lookahead"
+            )*
+        )
+        (?:\s*class="(?<class_name>[^"]+)")? # The class attribute, if any
+        (?<after_class>[^>]*?)               # The rest of the tag
+        >                                    # The closing tag
+    /xm';
 
 	preg_match(
 		$pattern,
