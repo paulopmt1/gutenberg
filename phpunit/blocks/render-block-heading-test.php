@@ -41,6 +41,10 @@ class Render_Block_Heading_Test extends WP_UnitTestCase {
 				'<h2 class="is-align-right wp-block-heading">Hello World</h2>'
 			),
 			array(
+				'<h2 style="display: block">Hello World</h2>',
+				'<h2 style="display: block" class="wp-block-heading">Hello World</h2>'
+			),
+			array(
 				'<h2 class="is-align-right custom classes">Hello World</h2>',
 				'<h2 class="is-align-right custom classes wp-block-heading">Hello World</h2>'
 			),
