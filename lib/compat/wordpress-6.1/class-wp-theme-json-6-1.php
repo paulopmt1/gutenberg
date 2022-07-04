@@ -525,6 +525,10 @@ class WP_Theme_JSON_6_1 extends WP_Theme_JSON_6_0 {
 
 		$block_styles = $pseudo_selector && isset( $node[ $pseudo_selector ] ) && isset( static::VALID_ELEMENT_PSEUDO_SELECTORS[ $current_element ] ) && in_array( $pseudo_selector, static::VALID_ELEMENT_PSEUDO_SELECTORS[ $current_element ], true ) ? $node[ $pseudo_selector ] : $node;
 
+		if ( isset( $block_styles['filter']['duotone'] ) && ! empty( $block_styles['filter']['duotone'] ) ) {
+			$selector = static::scope_selector( $selector, $block_metadata['duotone'] );
+		}
+
 		$styles = gutenberg_style_engine_generate(
 			$block_styles,
 			array(
@@ -546,7 +550,6 @@ class WP_Theme_JSON_6_1 extends WP_Theme_JSON_6_0 {
 		}
 
 		// 3. Generate and append the rules that use the duotone selector.
-		// @TODO migrate duotone to style engine
 		// if ( isset( $block_metadata['duotone'] ) && ! empty( $declarations_duotone ) ) {
 		// $selector_duotone = static::scope_selector( $block_metadata['selector'], $block_metadata['duotone'] );
 		// $block_rules     .= static::to_ruleset( $selector_duotone, $declarations_duotone );
