@@ -15,13 +15,49 @@
  * @return string The content of the block being rendered.
  */
 function block_core_heading_render( $attributes, $content ) {
-	$content = preg_replace(
-		'/^<h([1-6])(?: class="([^"]*)")?/m',
-		'<h$1 class="$2 wp-block-heading"',
-		$content
-	);
+	$matches = array();
+	$pattern = '/
+		^(\s*)                               # Any leading whitespace.
+		<(?<tag_name>
+			h[1-6]                           # The opening tag...
+			(?=\s|>)                         # ...followed by a whitespace or >
+		                                     # ?= means a "lookahead"
+		)
+		(?<before_class>                     # Any attributes prior to "class"
+			(?:                              # ?: is a "non-capturing group"
+				(?!class=")[^>]				 # Match all characters until ">" except when
+											 # the next character sequence is class="
+											 # ?! is a "negative lookahead"
+			)*
+		)
+		(?:\s*class="(?<class_name>[^"]+)")? # The class attribute, if any
+		(?<after_class>[^>]*?)               # The rest of the tag
+		>						             # The closing tag
+	/xm';
 
-	return $content;
+	preg_match(
+		$pattern,
+		$content,
+		$matches
+	);
+	if ( empty( $matches ) ) {
+		return $content;
+	}
+
+	$new_class_name = trim( $matches['class_name'] . ' wp-block-heading' );
+	// Construct a new opening tag.
+	$new_tag_parts = array(
+		$matches['tag_name'],
+		$matches['before_class'],
+		'class="' . $new_class_name . '"',
+		$matches['after_class'],
+	);
+	$new_tag_parts = array_map( 'trim', $new_tag_parts );
+	$new_tag_parts = array_filter( $new_tag_parts );
+	$new_tag       = '<' . implode( ' ', $new_tag_parts ) . '>';
+
+	// Replace the old opening tag with the new one.
+	return $new_tag . substr( $content, strlen( $matches[0] ) );
 }
 
 /**
